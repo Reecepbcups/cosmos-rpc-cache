@@ -131,12 +131,17 @@ app.get('*', async (req, res) => {
     // console.log(the_url);
     
     const v = await fetch(the_url); // ex: = https://rpc/abci_info?
+
+    if(v.status == 200 && v.headers.get('content-type')?.includes("application/json")) {
+        const json_res = await v.json();    
+        await redisClient?.setEx(REDIS_KEY, TTLs.default, JSON.stringify(json_res));
+        json_res.was_cached = false;
+        json_res.ms_time = Date.now() - time_start;
+        res.send(json_res);
+        return;
+    }
     
-    const json_res = await v.json();    
-    await redisClient?.setEx(REDIS_KEY, TTLs.default, JSON.stringify(json_res));
-    json_res.was_cached = false;
-    json_res.ms_time = Date.now() - time_start;
-    res.send(json_res);
+    res.send(await v.text());
 });
 
 // TODO: if using the rest API, actually use a a CosmWasm client against the RPC to speed up requests?
