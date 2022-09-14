@@ -1,8 +1,5 @@
 version: "2.0"
 
-# In the future, add option for mongodb here as well once we have read only DB's available
-# not tested
-
 services:
   redis:
     image: redis:latest

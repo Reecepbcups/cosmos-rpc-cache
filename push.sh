@@ -1,2 +1,3 @@
-# sudo docker image push reecepbcups/craft-rest-api:1.0.0
-echo "not supported yet"
+VERSION="reecepbcups/better-cosmos-rpcs:1.0.1"
+echo "Pushing '$VERSION'"
+sudo docker image push $VERSION

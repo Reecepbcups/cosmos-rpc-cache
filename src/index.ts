@@ -99,9 +99,9 @@ app.get('/', async (req, res) => {
 
         // make a requests to URL & save all data to ROUTER_CACHE as the HTML
         const v = await fetch(URL);
-        const html = await v.text();
-
-        const updated = html.replaceAll(REPLACE_TEXT, "localhost:4000")
+        const html = await v.text();        
+                
+        const updated = html.replaceAll(REPLACE_TEXT, `${req.get('host')}`)
         ROUTER_CACHE = updated;
     }
     
