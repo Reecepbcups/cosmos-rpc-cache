@@ -1,0 +1,1 @@
+sudo docker build -t reecepbcups/better-cosmos-rpcs:1.0.0 .

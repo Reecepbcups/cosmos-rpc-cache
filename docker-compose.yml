@@ -1,0 +1,18 @@
+version: '3.4'
+
+# sudo docker-compose up
+
+services:
+  redis:
+    image: redis:latest
+  api:
+    image: reecepbcups/better-cosmos-rpcs:1.0.0
+    # build: .
+    depends_on:
+      - redis
+    ports:
+      - '4000:4000'
+    environment:      
+      - API_PORT=4000
+      - REDIS_CONN_STRING=redis://redis:6379/0
+      - add rpcs list here?
