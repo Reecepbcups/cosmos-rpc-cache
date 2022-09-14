@@ -58,7 +58,37 @@ const REPLACE_TEXT = URL.split("//")[1];
 // Sends all our API endpoints
 //  routers
 var ROUTER_CACHE: string = "";
-var block_time = 6;
+
+const TTLs = {
+    default: 6,
+    health: 15,
+    num_unconfirmed_txs: 30, 
+    genesis: 60*60*2, // genesis state, 2 hours
+    block_query: 60*60, // when specific block Tx data is queried
+    tx_query: 60*60, // Tx hash
+};
+
+let TTL_Bindings = { // just have to ensure we also save any extra params passed through as well to the key
+    // long term queries
+    'block_by_hash?': TTLs.block_query,
+    'block?': TTLs.block_query,
+    'block_results?': TTLs.tx_query,
+    'commit?': TTLs.tx_query,
+    'abci_query?': TTLs.tx_query,
+    'check_tx?': TTLs.tx_query,
+    'tx?': TTLs.tx_query,    
+
+    // only change on gov prop
+    'genesis?': TTLs.genesis,
+    'genesis_chunked?': TTLs.genesis,
+    'consensus_params?': TTLs.genesis,
+    'validators?': TTLs.genesis,    
+
+    'health?': TTLs.health,
+    'dump_consensus_state?': TTLs.default,
+    'num_unconfirmed_txs?': TTLs.num_unconfirmed_txs,                   
+}
+
 app.get('/', async (req, res) => {
     // if(block_time == 0) {
     //     block_time = Math.round((await get_block_data()).time_difference);
@@ -103,7 +133,7 @@ app.get('*', async (req, res) => {
     const v = await fetch(the_url); // ex: = https://rpc/abci_info?
     
     const json_res = await v.json();    
-    await redisClient?.setEx(REDIS_KEY, block_time, JSON.stringify(json_res));
+    await redisClient?.setEx(REDIS_KEY, TTLs.default, JSON.stringify(json_res));
     json_res.was_cached = false;
     json_res.ms_time = Date.now() - time_start;
     res.send(json_res);
