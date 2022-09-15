@@ -1,7 +1,7 @@
 // Express
 import express from 'express';
 import { config } from 'dotenv';
-import { connectToRedis, cache_get, redisClient } from './services/database.service';
+import { connectToRedis, cache_get, redisClient, connectToMongo } from './services/database.service';
 // Cors
 import cors from 'cors';
 // CosmWasmClient
@@ -12,7 +12,7 @@ config();
 // Variables
 const {
     API_PORT, RPC_URL,
-    DB_CONN_STRING, DB_NAME, REDIS_CONN_STRING,
+    MONGO_DB_CONN_STRING, REDIS_CONN_STRING,
     COINGECKO_SUPPORT, COINGECKO_COINS, COINGECKO_CACHE_TIME } = process.env;
 
 // API initialization
@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Cache
 connectToRedis(REDIS_CONN_STRING);
-// connectToMongo(DB_CONN_STRING, DB_NAME); // future for long term storage
+// connectToMongo(MONGO_DB_CONN_STRING, "cosmos_rpc_cache"); // future for long term storage
 
 if (!RPC_URL) {
     console.error('RPC_URL not set');

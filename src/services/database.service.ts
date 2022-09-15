@@ -3,7 +3,7 @@ import * as redis from 'redis';
 
 // List of loaded mongo collections
 export const collections: { 
-    some_collection?: mongo.Collection;
+    blocks_tx_cache?: mongo.Collection;
 } = {};
 // Connected redis client
 export let redisClient: redis.RedisClientType<any, any>;
@@ -20,7 +20,7 @@ export const connectToMongo = async (connectionString, dbName) => {
 
     const db: mongo.Db = client.db(dbName);
     
-    collections.some_collection = db.collection('some_collection_here');
+    collections.blocks_tx_cache = db.collection('blocks_and_txs');
 
     console.log(`Successfully connected to Mongo Database ${db.databaseName}`);
 };
