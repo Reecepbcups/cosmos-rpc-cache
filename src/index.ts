@@ -102,7 +102,7 @@ app.get('*', async (req, res) => {
     }
 
     const the_url = `${RPC_URL}${req.url}`;
-    // console.log(the_url, "->>" , req.url);
+    console.log(the_url, "->>" , req.url);
     
     const v = await fetch(the_url); // ex: = https://YOUR_RPC/abci_info?
 
@@ -131,16 +131,21 @@ app.get('*', async (req, res) => {
 app.post('*', async (req, res) => {
     const time_start = Date.now();
     const the_url = `${RPC_URL}${req.url}`;
-    // console.log(the_url, "->>" , req.url);
+    console.log(the_url, "->>" , req.url);
 
     // console.log(req.path);
     // console.log(req.body?.method);
     // console.log(req.body?.params);
 
+    if(!req.body?.method) {
+        res.status(400).send({"err": "no body set"});
+        return;
+    }
+
     // if req.body
-    if(req.body) {
+    // if(req.body) {
         const REDIS_KEY = `rpc_cache:${req.body?.method}:${JSON.stringify(req.body?.params)}`;
-        // console.log(REDIS_KEY);        
+        console.log("POST", REDIS_KEY);        
         let cached_query = await redisClient?.get(REDIS_KEY); // hset for specific in future?
         if(cached_query) {
             const data = JSON.parse(cached_query);
@@ -149,12 +154,25 @@ app.post('*', async (req, res) => {
             res.json(data);
             return;
         }
+
+        let body = {};
+        if(req.body) {
+            body = req.body;
+            console.log("BODY", body);            
+        }
     
         const v = await fetch(the_url, {
             method: 'POST',
-            body: JSON.stringify(req.body),
-            headers: { 'Content-Type': 'application/json' },        
+            body: JSON.stringify(req.body), // body or nothing            
+            headers: { 'Content-Type': 'application/json' }
+        }).catch((err) => {
+            console.log(err);   
+            res.status(404).send({"err": err});         
         });
+
+        if(!v) {            
+            return;
+        }
 
         // return json if the header is json
         if(v.headers.get('content-type')?.includes("application/json")) {
@@ -173,8 +191,7 @@ app.post('*', async (req, res) => {
                 res.send(await v.text());
             }
         }
-    }
-    
+    // }    
 
 });
 
