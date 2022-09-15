@@ -4,14 +4,8 @@ import { config } from 'dotenv';
 import { connectToRedis, cache_get, redisClient } from './services/database.service';
 // Cors
 import cors from 'cors';
-
-// import fs
-import fs from 'fs';
+// CosmWasmClient
 import { getCosmWasmClient } from './services/wasmclient.service';
-
-// Controllers
-// import realestateRouter from './routes/realestate.route';
-
 // Initializes env variables
 config();
 
@@ -28,24 +22,21 @@ app.use(express.urlencoded({ extended: true }));
 
 // Cache
 connectToRedis(REDIS_CONN_STRING);
-// connectToMongo(DB_CONN_STRING, DB_NAME);
+// connectToMongo(DB_CONN_STRING, DB_NAME); // future for long term storage
 
 if(!RPC_URL) {
     console.error('RPC_URL not set');
     process.exit(1);
 }
 
-// const URL = "https://craft-rpc.crafteconomy.io"; // ensure it does not end with a / when loading in
-// const REPLACE_TEXT = "craft-rpc.crafteconomy.io";
 let REPLACE_TEXT = RPC_URL.split("//")[1];
-// add check to remove : if another port is used, like 80 or 443?
 
+// add check to remove : if another port is used, like 80 or 443?
 if(REPLACE_TEXT.includes(":")) {
-    REPLACE_TEXT = REPLACE_TEXT.split(":")[0]; // get just teh base URL as that is all the RPC shows I think?
+    REPLACE_TEXT = REPLACE_TEXT.split(":")[0];
 }
 
 
-// Sends all our API endpoints
 //  routers
 var ROUTER_CACHE: string = "";
 var HOST_URL: string = ""
@@ -54,7 +45,7 @@ const TTLs = {
     default: 6,
     health: 15,
     num_unconfirmed_txs: 30, 
-    genesis: 60*60*2, // genesis state, 2 hours
+    genesis: 60*60*6, // genesis state, 6 hours
     block_query: 60*60, // when specific block Tx data is queried
     tx_query: 60*60, // Tx hash
     favicon: 60*60*12, // always return the same since this never changes
@@ -79,18 +70,16 @@ let TTL_Bindings = { // just have to ensure we also save any extra params passed
     '/health?': TTLs.health,
     '/dump_consensus_state?': TTLs.default,
     '/num_unconfirmed_txs?': TTLs.num_unconfirmed_txs,   
-    // '/favicon.ico': TTLs.favicon,             
+    '/favicon.ico': TTLs.favicon,             
 }
 
 app.get('/', async (req, res) => {
-    if(Object.keys(ROUTER_CACHE).length === 0) {        
-        // const urlStart = `${req.protocol}://${req.get('host')}`
-
-        // make a requests to URL & save all data to ROUTER_CACHE as the HTML
+    if(Object.keys(ROUTER_CACHE).length === 0) {                
+        // make a requests to URL & save all data to ROUTER_CACHE as the HTML (lifetime of program, in memory)
         const v = await fetch(RPC_URL);
         const html = await v.text();        
         HOST_URL = `${req.get('host')}`
-        // console.log(REPLACE_TEXT, `${req.get('host')}`);                        
+        // console.log(REPLACE_TEXT, `${req.get('host')}`);              
         ROUTER_CACHE = html.replaceAll(REPLACE_TEXT, HOST_URL)        
     }
     
@@ -102,12 +91,8 @@ app.get('/', async (req, res) => {
 app.get('*', async (req, res) => {
     const time_start = Date.now();
     
-    //check if URL is in cache, if so use that    
     const REDIS_KEY = `rpc_cache:${req.url}`;
-    // const REDIS_HSET_KEY = `${coin}` // for marketplace expansion
-    // let cached_usd_price = await redisClient?.hGet(REDIS_KEY, REDIS_HSET_KEY);
-
-    let cached_query = await redisClient?.get(REDIS_KEY);        
+    let cached_query = await redisClient?.get(REDIS_KEY); // hset for specific in future?
     if (cached_query) {    
         const data = JSON.parse(cached_query);
         data.was_cached = true;
@@ -119,9 +104,9 @@ app.get('*', async (req, res) => {
     const the_url = `${RPC_URL}${req.url}`;
     // console.log(the_url, "->>" , req.url);
     
-    const v = await fetch(the_url); // ex: = https://rpc/abci_info?
+    const v = await fetch(the_url); // ex: = https://YOUR_RPC/abci_info?
 
-    // chjeck if req.url starts with anything in TTL_Bindings
+    // checks if req.url starts with anything in TTL_Bindings
     let ttl = TTLs.default;
     for(const key in TTL_Bindings) {
         if(req.url.startsWith(key)) {
@@ -141,8 +126,6 @@ app.get('*', async (req, res) => {
         res.send(await v.text());
     }
 });
-
-// TODO: if using the rest API, actually use a a CosmWasm client against the RPC to speed up requests?
 
 // Start REST api
 app.listen(API_PORT, async () => {

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { getCosmWasmClient } from '../services/wasmclient.service';
 
-
+// Future with Rest Endpoint i think
 export const getSomeQuery = async (req: Request, res: Response) => {
     // const { parent_contract_address } = req.params;
     // const client = await getCosmWasmClient();
