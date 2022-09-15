@@ -10,7 +10,11 @@ import { getCosmWasmClient } from './services/wasmclient.service';
 config();
 
 // Variables
-const { API_PORT, DB_CONN_STRING, DB_NAME, REDIS_CONN_STRING, RPC_URL, NODE_INFO } = process.env;
+const { 
+    API_PORT, 
+    DB_CONN_STRING, DB_NAME, REDIS_CONN_STRING, 
+    RPC_URL, NODE_INFO, 
+    COINGECKO_SUPPORT, COINGECKO_COINS, COINGECKO_CACHE_TIME } = process.env;
 
 // API initialization
 const app = express();
@@ -40,6 +44,8 @@ if(REPLACE_TEXT.includes(":")) {
 //  routers
 var ROUTER_CACHE: string = "";
 var HOST_URL: string = ""
+var COINGECKO_URL: string = ""
+var COINGECKO_CACHE_SECONDS: number = 6;
 
 const TTLs = {
     default: 6,
@@ -88,7 +94,15 @@ app.get('/', async (req, res) => {
         // console.log(REPLACE_TEXT, `${req.get('host')}`);              
         ROUTER_CACHE += html.replaceAll(REPLACE_TEXT, HOST_URL)
 
-        
+
+        if(COINGECKO_SUPPORT && COINGECKO_COINS && COINGECKO_SUPPORT.toLowerCase().startsWith("t")) {
+            ROUTER_CACHE += `<br/><br/>CoinGecko Price Endpoint: <a href="//${HOST_URL}/prices?">//${HOST_URL}/prices?</a><br/>`
+
+            if(COINGECKO_CACHE_TIME) {
+                COINGECKO_CACHE_SECONDS = parseInt(COINGECKO_CACHE_TIME);
+            }
+        }
+
     }
     
     res.send(ROUTER_CACHE)
@@ -107,6 +121,25 @@ app.get('*', async (req, res) => {
         data.ms_time = Date.now() - time_start;
         res.json(data);
         return;
+    }
+    
+    if(req.url.startsWith("/prices") && COINGECKO_COINS) {        
+        const v = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_COINS}&vs_currencies=usd`).catch((e) => {
+            console.error(e);
+            res.status(500).send(e);
+            return;
+        });
+        if(v) {            
+            const json: any = {};
+            json.chains = await v.json();
+
+            json.was_cached = false;
+            json.ms_time = Date.now() - time_start;            
+            res.json(json);
+            await redisClient?.setEx(REDIS_KEY, 6, JSON.stringify(json));
+            return;
+        }
+        res.status(500).send("Error");        
     }
 
     const the_url = `${RPC_URL}${req.url}`;
