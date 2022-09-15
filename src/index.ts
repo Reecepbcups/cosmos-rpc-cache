@@ -102,7 +102,7 @@ app.get('*', async (req, res) => {
     }
 
     const the_url = `${RPC_URL}${req.url}`;
-    console.log(the_url, "->>" , req.url);
+    // console.log(the_url, "->>" , req.url);
     
     const v = await fetch(the_url); // ex: = https://YOUR_RPC/abci_info?
 
@@ -131,7 +131,7 @@ app.get('*', async (req, res) => {
 app.post('*', async (req, res) => {
     const time_start = Date.now();
     const the_url = `${RPC_URL}${req.url}`;
-    console.log(the_url, "->>" , req.url);
+    // console.log(the_url, "->>" , req.url);
 
     // console.log(req.path);
     // console.log(req.body?.method);
@@ -145,7 +145,7 @@ app.post('*', async (req, res) => {
     // if req.body
     // if(req.body) {
         const REDIS_KEY = `rpc_cache:${req.body?.method}:${JSON.stringify(req.body?.params)}`;
-        console.log("POST", REDIS_KEY);        
+        // console.log("POST", REDIS_KEY);        
         let cached_query = await redisClient?.get(REDIS_KEY); // hset for specific in future?
         if(cached_query) {
             const data = JSON.parse(cached_query);
@@ -158,7 +158,7 @@ app.post('*', async (req, res) => {
         let body = {};
         if(req.body) {
             body = req.body;
-            console.log("BODY", body);            
+            // console.log("BODY", body);            
         }
     
         const v = await fetch(the_url, {
