@@ -10,7 +10,7 @@ import { getCosmWasmClient } from './services/wasmclient.service';
 config();
 
 // Variables
-const { API_PORT, DB_CONN_STRING, DB_NAME, REDIS_CONN_STRING, RPC_URL } = process.env;
+const { API_PORT, DB_CONN_STRING, DB_NAME, REDIS_CONN_STRING, RPC_URL, NODE_INFO } = process.env;
 
 // API initialization
 const app = express();
@@ -79,8 +79,15 @@ app.get('/', async (req, res) => {
         const v = await fetch(RPC_URL);
         const html = await v.text();        
         HOST_URL = `${req.get('host')}`
+
+        if(NODE_INFO) {
+            ROUTER_CACHE += NODE_INFO;
+        }
+
         // console.log(REPLACE_TEXT, `${req.get('host')}`);              
-        ROUTER_CACHE = html.replaceAll(REPLACE_TEXT, HOST_URL)        
+        ROUTER_CACHE += html.replaceAll(REPLACE_TEXT, HOST_URL)
+
+        ROUTER_CACHE += '<br/>Source Code: <a href="https://github.com/Reecepbcups/better-cosmos-rpcs" target=_blank>Github Source</a>'
     }
     
     res.send(ROUTER_CACHE)
