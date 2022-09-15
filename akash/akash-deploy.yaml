@@ -12,14 +12,16 @@ services:
     env:
       - API_PORT=4000
       - REDIS_CONN_STRING=redis://redis:6379/0
-      - RPC_URL=https://craft-rpc.crafteconomy.io
+      - RPC_URL=https://rpc.juno.strange.love
     depends_on:
       - redis
     expose:
       - port: 4000
         as: 80
         to:
-          - global: true 
+          - global: true
+        accept:
+        - "juno-rpc.pbcups.org"          
 
 profiles:
   compute:
