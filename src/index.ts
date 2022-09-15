@@ -127,6 +127,57 @@ app.get('*', async (req, res) => {
     }
 });
 
+// TODO: add 6 second cache
+app.post('*', async (req, res) => {
+    const time_start = Date.now();
+    const the_url = `${RPC_URL}${req.url}`;
+    // console.log(the_url, "->>" , req.url);
+
+    // console.log(req.path);
+    // console.log(req.body?.method);
+    // console.log(req.body?.params);
+
+    // if req.body
+    if(req.body) {
+        const REDIS_KEY = `rpc_cache:${req.body?.method}:${JSON.stringify(req.body?.params)}`;
+        // console.log(REDIS_KEY);        
+        let cached_query = await redisClient?.get(REDIS_KEY); // hset for specific in future?
+        if(cached_query) {
+            const data = JSON.parse(cached_query);
+            data.was_cached = true;
+            data.ms_time = Date.now() - time_start;
+            res.json(data);
+            return;
+        }
+    
+        const v = await fetch(the_url, {
+            method: 'POST',
+            body: JSON.stringify(req.body),
+            headers: { 'Content-Type': 'application/json' },        
+        });
+
+        // return json if the header is json
+        if(v.headers.get('content-type')?.includes("application/json")) {
+            const json_res = await v.json();
+            json_res.was_cached = false;
+            json_res.ms_time = Date.now() - time_start;            
+            await redisClient?.setEx(REDIS_KEY, TTLs.default, JSON.stringify(json_res));
+            res.send(json_res);
+        } else {            
+            try {
+                const json_res = await v.json();
+                json_res.was_cached = false;
+                json_res.ms_time = Date.now() - time_start;
+                res.send(json_res);
+            } catch(e) {
+                res.send(await v.text());
+            }
+        }
+    }
+    
+
+});
+
 // Start REST api
 app.listen(API_PORT, async () => {
     console.log(`Started RPC cacher on port ${API_PORT}`);
