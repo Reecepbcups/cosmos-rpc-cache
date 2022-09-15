@@ -11,9 +11,8 @@ config();
 
 // Variables
 const {
-    API_PORT,
+    API_PORT, RPC_URL,
     DB_CONN_STRING, DB_NAME, REDIS_CONN_STRING,
-    RPC_URL, NODE_INFO,
     COINGECKO_SUPPORT, COINGECKO_COINS, COINGECKO_CACHE_TIME } = process.env;
 
 // API initialization
@@ -87,12 +86,6 @@ app.get('/', async (req, res) => {
         const v = await fetch(RPC_URL);
         const html = await v.text();
         HOST_URL = `${req.get('host')}`
-
-        // // Optional: Adds information about the node (user can put anything here)
-        if (NODE_INFO) { ROUTER_CACHE += NODE_INFO; }
-        // // Ensures source is provided by the RPC for all queries
-        ROUTER_CACHE += 'Source Code: <a href="https://github.com/Reecepbcups/better-cosmos-rpcs" target=_blank>Github Source</a><br/>'
-        
 
         // console.log(REPLACE_TEXT, `${req.get('host')}`);      
         ROUTER_CACHE += html.replaceAll(REPLACE_TEXT, HOST_URL)
@@ -205,18 +198,31 @@ app.post('*', async (req, res) => {
     // }
 
     // TODO: does this work now?
-    let proxy_headers = {};
+    // let proxy_headers = {};
+    // if(req.headers) {
+    //     req.headers.origin = HOST_URL
+    //     proxy_headers = req.headers;
+    //     console.log(proxy_headers);
+    // }
+
+    let headers = { 'content-type': 'application/json', 'origin': HOST_URL };
     if(req.headers) {
-        req.headers.origin = HOST_URL
-        proxy_headers = req.headers;
-        console.log(proxy_headers);
-        
+        // console.log("headers", req.headers);        
+        const arr: string[] = [
+            "sec-fetch-mode", "content-type", "accept-language", "x-scheme", "content-length", "accept-encoding",
+            "cf-ipcountry", "cf-visitor", "user-agent", "accept", "accept"
+        ];
+        for(const item of arr) {
+            if(req.headers[item]) {
+                headers[item] = req.headers[item];
+            }
+        }
     }
 
     const v = await fetch(the_url, {
         method: 'POST',
         body: JSON.stringify(req.body), // body or nothing            
-        headers: proxy_headers,
+        headers: headers,
     }).catch((err) => {
         console.log(err);
         res.status(404).send({ "err": err });
