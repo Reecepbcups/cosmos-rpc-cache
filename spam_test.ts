@@ -8,7 +8,7 @@ async function query() {
     
 
     // loop 100 times
-    for(let i = 0; i < 100; i++) {    
+    for(let i = 0; i < 20; i++) {    
         array_to_call.push(client.queryContractSmart("juno1r4pzw8f9z0sypct5l9j906d47z998ulwvhvqe5xdwgy8wf84583sxwh0pa", {balance: { address: "juno1fkg9kmfa60ckg2syvnz7vxgtkpetmqdnzaxdnz"}}))
     }
 
