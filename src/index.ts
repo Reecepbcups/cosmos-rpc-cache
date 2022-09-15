@@ -83,11 +83,12 @@ app.get('/', async (req, res) => {
         if(NODE_INFO) {
             ROUTER_CACHE += NODE_INFO;
         }
+        ROUTER_CACHE += 'Source Code: <a href="https://github.com/Reecepbcups/better-cosmos-rpcs" target=_blank>Github Source</a><br/>'
 
         // console.log(REPLACE_TEXT, `${req.get('host')}`);              
         ROUTER_CACHE += html.replaceAll(REPLACE_TEXT, HOST_URL)
 
-        ROUTER_CACHE += '<br/>Source Code: <a href="https://github.com/Reecepbcups/better-cosmos-rpcs" target=_blank>Github Source</a>'
+        
     }
     
     res.send(ROUTER_CACHE)
