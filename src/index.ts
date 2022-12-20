@@ -1,19 +1,21 @@
 // Express
 import express from 'express';
 import { config } from 'dotenv';
-import { connectToRedis, cache_get, redisClient, connectToMongo } from './services/database.service';
+import { connectToRedis, cache_get, redisClient } from './services/database.service';
 // Cors
 import cors from 'cors';
 // CosmWasmClient
 import { getCosmWasmClient } from './services/wasmclient.service';
 // Initializes env variables
+
+import * as fs from 'fs';
+
+// juno-rpc-cache.reece.sh
+
 config();
 
 // Variables
-const {
-    API_PORT, RPC_URL,
-    MONGO_DB_CONN_STRING, REDIS_CONN_STRING,
-    COINGECKO_SUPPORT, COINGECKO_COINS, COINGECKO_CACHE_TIME } = process.env;
+const { API_PORT, REDIS_CONN_STRING, RPC_URL, COINGECKO_SUPPORT, COINGECKO_COINS, COINGECKO_CACHE_TIME } = process.env;
 
 // API initialization
 const app = express();
@@ -25,9 +27,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Cache
 connectToRedis(REDIS_CONN_STRING);
-// connectToMongo(MONGO_DB_CONN_STRING, "cosmos_rpc_cache"); // future for long term storage
 
 if (!RPC_URL) {
+    // In the future make this BACKUP_RPC_URLS for multiple nodes
     console.error('RPC_URL not set');
     process.exit(1);
 }
@@ -67,7 +69,7 @@ let TTL_Bindings = { // just have to ensure we also save any extra params passed
     '/tx?': TTLs.tx_query,
 
     // only change on gov prop
-    '/genesis?': TTLs.genesis,
+    '/genesis': TTLs.genesis,
     '/genesis_chunked?': TTLs.genesis,
     '/consensus_params?': TTLs.genesis,
     '/validators?': TTLs.genesis,
@@ -78,10 +80,18 @@ let TTL_Bindings = { // just have to ensure we also save any extra params passed
     '/favicon.ico': TTLs.favicon,
 }
 
+
+// saveToCache("test", {age:18,name:"reece"}, 10);
+
+// getValueFromCache("test").then((data) => {
+//     console.log(data);
+// })
+
 // Root of the RPC. Makes 1 query to the real RPC & sets that HTML here.
 // If extra data is provided (coingecko, nodeinfo) we append that in the HTML/
 // In memory for near instant queries
 app.get('/', async (req, res) => {
+    console.log("root");
     if (Object.keys(ROUTER_CACHE).length === 0) {
         const v = await fetch(RPC_URL);
         const html = await v.text();
@@ -95,7 +105,7 @@ app.get('/', async (req, res) => {
             // Optional, default = 6 seconds cache per query.
             if (COINGECKO_CACHE_TIME) { COINGECKO_CACHE_SECONDS = parseInt(COINGECKO_CACHE_TIME); }
             ROUTER_CACHE += `<a href="//${HOST_URL}/prices?">//${HOST_URL}/prices?</a>`
-        }        
+        }
     }
 
     res.send(ROUTER_CACHE)
@@ -108,7 +118,7 @@ app.get('*', async (req, res) => {
 
     // If cache hit, return that value.
     const REDIS_KEY = `rpc_cache:${req.url}`;
-    let cached_query = await redisClient?.get(REDIS_KEY); // hset for specific in future?
+    let cached_query = await redisClient?.get(REDIS_KEY); // hset for specific in future?    
     if (cached_query) {
         const data = JSON.parse(cached_query);
         data.was_cached = true;
@@ -131,14 +141,14 @@ app.get('*', async (req, res) => {
             json.was_cached = false;
             json.ms_time = Date.now() - time_start;
             res.json(json);
-            await redisClient?.setEx(REDIS_KEY, 6, JSON.stringify(json));
+            await redisClient?.setEx(REDIS_KEY, 10, JSON.stringify(json));
             return;
         }
         res.status(500).send("Error");
     }
 
     const the_url = `${RPC_URL}${req.url}`;
-    // console.log(the_url, "->>" , req.url);
+    console.log(the_url, "->>" , req.url);
     const v = await fetch(the_url); // ex: = https://YOUR_RPC/abci_info?
 
     // checks if req.url starts with anything in TTL_Bindings
@@ -150,6 +160,8 @@ app.get('*', async (req, res) => {
             break;
         }
     }
+
+    console.log('theTTL', ttl);
 
     if (v.headers.get('content-type')?.includes("application/json")) {
         const json_res = await v.json();
@@ -165,7 +177,7 @@ app.get('*', async (req, res) => {
 app.post('*', async (req, res) => {
     const time_start = Date.now();
     const the_url = `${RPC_URL}${req.url}`;
-    // console.log(the_url, "->>" , req.url);
+    console.log(the_url, "->>" , req.url);
 
     if (!req.body?.method) {
         res.status(400).send({ "err": "no body set" });
@@ -206,14 +218,14 @@ app.post('*', async (req, res) => {
     // }
 
     let headers = { 'content-type': 'application/json', 'origin': HOST_URL };
-    if(req.headers) {
+    if (req.headers) {
         // console.log("headers", req.headers);        
         const arr: string[] = [
             "sec-fetch-mode", "content-type", "accept-language", "x-scheme", "content-length", "accept-encoding",
             "cf-ipcountry", "cf-visitor", "user-agent", "accept", "accept"
         ];
-        for(const item of arr) {
-            if(req.headers[item]) {
+        for (const item of arr) {
+            if (req.headers[item]) {
                 headers[item] = req.headers[item];
             }
         }
@@ -260,7 +272,7 @@ app.listen(API_PORT, async () => {
     if (client) {
         console.log(`Connected to cosmwasm client`);
     } else {
-        console.log(`Error cconnecting to the cosmwasm client, is the RPC correct?`);
+        console.log(`Error connecting to the cosmwasm client, is the RPC correct?`);
         process.exit(1);
     }
 });
