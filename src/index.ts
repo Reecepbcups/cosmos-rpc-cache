@@ -111,6 +111,25 @@ app.get('/', async (req, res) => {
     res.send(ROUTER_CACHE)
 });
 
+function websocket_connect() {
+    return new Promise(function (resolve, reject) {
+        var ws = new WebSocket('ws://127.0.0.1:8081/echo');
+        ws.onopen = function () {
+            resolve(ws);
+        };
+        ws.onerror = function (err) {
+            reject(err);
+        };
+        ws.onclose = function (evt) {
+            console.log("CLOSE SOCKET", new Date().toLocaleString());
+        };
+        ws.onmessage = function (evt) {
+            console.log("RESPONSE SOCKET: " + "RECEIVED" /* evt.data */, new Date().toLocaleString());
+        };
+    });
+}
+
+import WebSocket from 'ws';
 
 // router get any other query endpoint
 app.get('*', async (req, res) => {
@@ -147,9 +166,43 @@ app.get('*', async (req, res) => {
         res.status(500).send("Error");
     }
 
-    const the_url = `${RPC_URL}${req.url}`;
+    let the_url = `${RPC_URL}${req.url}`;
     console.log(the_url, "->>" , req.url);
-    const v = await fetch(the_url); // ex: = https://YOUR_RPC/abci_info?
+
+    // TODO: We need to pass through the websocket requests to the RPC's websocket through the reverse proxy
+    // Basically making this its own mini Reverse Proxy
+    
+    // if (req.url.includes("/websocket")) {
+    //     const wss_url = RPC_URL.replace("https://", "wss://").replace("http://", "wss://") + req.url;        
+    //     console.log("websocket requests", wss_url);   
+        
+    //     var socket = new WebSocket(wss_url);
+
+    //     socket.onopen = function (event) {
+    //         console.log("OPEN SOCKET", new Date().toLocaleString());
+    //         // print out req.body
+    //         console.log("REQUEST SOCKET: " + JSON.stringify(req.body), new Date().toLocaleString());
+    //         let r = socket.send(JSON.stringify(req.body));
+
+    //         socket.send(JSON.stringify(req.body));
+    //     };
+    //     socket.onmessage = function (event) {
+    //         console.log("RESPONSE SOCKET: " + event.data, new Date().toLocaleString());
+    //         res.status(200).send(event.data);            
+    //     };        
+    //     socket.onclose = function (event) {
+    //         console.log("CLOSE SOCKET", new Date().toLocaleString());
+    //     };
+
+    //     socket.onerror = function (error) {
+    //         console.log("ERROR SOCKET: " + error, new Date().toLocaleString());
+    //     };        
+
+    //     return;
+    // }
+        
+
+    let v = await fetch(the_url); // ex: = https://YOUR_RPC/abci_info?    
 
     // checks if req.url starts with anything in TTL_Bindings
     let ttl = TTLs.default;

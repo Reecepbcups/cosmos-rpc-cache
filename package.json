@@ -26,7 +26,8 @@
     "joi": "^17.6.0",
     "mongodb": "~4.9.0",
     "redis": "~4.3.0",
-    "reflect-metadata": "^0.1.13"
+    "reflect-metadata": "^0.1.13",
+    "ws": "^8.11.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.12",
